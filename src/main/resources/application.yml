@@ -1,0 +1,19 @@
+info:
+  app:
+    desc: Internet Movie Graph Database
+    name: IMGDB Service
+    version: 1.0
+    license: Lunatech
+    contact:
+      email: info@lunatech.com
+      name: lunatech
+      url: http://www.lunatech.nl
+server:
+  port: 5002
+spring:
+  profiles:
+    active: test
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
