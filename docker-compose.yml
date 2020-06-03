@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  imgdb:
+    restart: always
+    ports:
+      - "5001:5001"
+    image: openjdk:11
+    command: java -Xmx128m -jar /usr/imgdb.jar
+    volumes:
+      - $PWD/build/libs/imgdb-1.0.jar:/usr/imgdb.jar:ro

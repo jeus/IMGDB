@@ -1,0 +1,110 @@
+###
+GET http://localhost:5001/person/degree?firstuid=nm0000102&seconduid=nm0000129
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+       client.assert(response.body === 0);
+    });
+%}
+###
+GET http://localhost:5001/person/share?firstuid=nm0000136&seconduid=nm0000318
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        var objJson = JSON.stringify(response.body);
+        var json =  JSON.parse(objJson);
+        client.log(json[0].name);
+       client.assert(json.length === 3);
+       client.assert(json[0].name == "Edward Scissorhands")
+       client.assert(json[1].name == "Corpse Bride")
+       client.assert(json[2].name == "Sweeney Todd: The Demon Barber of Fleet Street")
+    });
+%}
+
+###Marlon Brando (RIP)
+GET http://localhost:5001/person/movie?name=Marlon Brando
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        var objJson = JSON.stringify(response.body);
+        var json =  JSON.parse(objJson);
+        client.log(json.length);
+        client.assert(json.length === 38);
+        client.assert(json[0].name == "The Appaloosa")
+        client.assert(json[0].title == "The Appaloosa")
+        client.assert(json[0].release == 1966)
+    });
+%}
+
+
+###Marlon Brando (RIP)
+GET http://localhost:5001/person?name=Marlon Brando
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        var objJson = JSON.stringify(response.body);
+        var json =  JSON.parse(objJson);
+        client.log(json.length);
+        client.assert(json.length === 1);
+        client.assert(json[0].uid == "nm0000008")
+        client.assert(json[0].name == "Marlon Brando")
+        client.assert(json[0].knownForTitles.length == 4)
+    });
+%}
+
+
+###
+GET http://localhost:5001/person?name=Kevin Bacon
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        var objJson = JSON.stringify(response.body);
+        var json =  JSON.parse(objJson);
+        client.assert(json.length === 4);
+        client.assert(json[0].uid == "nm0000102")
+        client.assert(json[1].uid == "nm3636162")
+        client.assert(json[2].uid == "nm4025714")
+        client.assert(json[3].uid == "nm9323132")
+    });
+%}
+
+###
+GET http://localhost:5001/person/genres?uid=nm0000102
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        var objJson = JSON.stringify(response.body);
+        var json =  JSON.parse(objJson);
+         client.assert(json.length === 18);
+        client.assert(json.typeCastGenre == null)
+        client.assert(json[0].name == "Drama")
+        client.assert(json[0].count == "35")
+        client.assert(json[0].percent == "29.0")
+    });
+%}
+
+###
+GET http://localhost:5001/person/typecast?uid=nm0000102
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        var objJson = JSON.stringify(response.body);
+        var json =  JSON.parse(objJson);
+        client.assert(json.typeCastGenre == null)
+        client.assert(json.genrePercents[0].name == "Drama")
+        client.assert(json.genrePercents[0].count == "35")
+        client.assert(json.genrePercents[0].percent == "29.0")
+        client.assert(json.genrePercents[0].sum == "117")
+    });
+%}
+
+###
+
+
