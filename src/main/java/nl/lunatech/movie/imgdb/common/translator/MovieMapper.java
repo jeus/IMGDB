@@ -36,8 +36,6 @@ public interface MovieMapper {
 
     TypeCastDto toTypeCastDto(TypeCastModel typeCastModel);
 
-    // --Commented out by Inspection (6/3/20, 10:21 AM):TypeCastModel toTypeCastModel(TypeCastDto typeCastDto);
-
     GenrePercent toGenrePercentModel(GenrePercentDto genrePercentDto);
 
     List<GenrePercent> toGenrePercentModel(List<GenrePercentDto> genrePercents);

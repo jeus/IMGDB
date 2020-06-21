@@ -5,9 +5,9 @@ info:
     version: 1.0
     license: Lunatech
     contact:
-      email: info@lunatech.com
+      email: info@IMGDB.nl
       name: lunatech
-      url: http://www.lunatech.nl
+      url: http://www.IMGDB.nl
 spring:
   data:
     neo4j:
