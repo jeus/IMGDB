@@ -5,15 +5,21 @@ info:
     version: 1.0
     license: Lunatech
     contact:
-      email: info@lunatech.com
+      email: info@IMGDB.nl
       name: lunatech
-      url: http://www.lunatech.nl
-server:
-  port: 5002
+      url: http://www.IMGDB.nl
 spring:
+  data:
+    neo4j:
+      username: neo4j
+      password: admin
+      uri: bolt://185.134.23.58:7687
   profiles:
     active: test
+server:
+  port: 5002
 logging:
   level:
-    root: INFO
-    org.springframework.web: INFO
+    root: debug
+    org.springframework.web: debug
+
