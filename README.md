@@ -1,4 +1,4 @@
-# Internet Movie GRAPH Database (IMRDB)
+# Internet Movie GRAPH Database (IMGDB)
 
 # Getting Started
 These instructions will get you a view of the *`Internet Movie Graph Database`* microservices up and running on your local machine for development and testing purposes.\
