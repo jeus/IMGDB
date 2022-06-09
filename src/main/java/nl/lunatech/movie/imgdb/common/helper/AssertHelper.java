@@ -23,6 +23,7 @@ public interface AssertHelper {
     void notNull(Object... object) throws AssertingException;
     void notNull(String str) throws AssertingException;
     void notEmpty(Collection<?> collection) throws AssertingException;
-    <T> void NotEqual(T first, T second) throws AssertingException;
+    <T> void notEqual(T first, T second) throws AssertingException;
+    void notBigger(int first, int second) throws AssertingException;
 
 }

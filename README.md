@@ -52,7 +52,7 @@ you can run project directly by `java` command or handle it by container both of
 ~# docker-compose  -f up 
 ```
 
-Open [localhost:5001/swagger-ui.html](http://localhost:5001/swagger-ui.html)
+Open [localhost:5002/swagger-ui/index.html](http://localhost:5002/swagger-ui/index.html)
 
 
 ##Sample

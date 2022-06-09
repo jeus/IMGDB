@@ -10,6 +10,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -31,6 +32,8 @@ public interface MovieMapper {
     MovieDto toMovieDto(Movie movie);
 
     List<MovieDto> toMovieDtos(List<Movie> movie);
+
+    Collection<MovieDto> toMovieDtos(Collection<Movie> movie);
 
     GenrePercentDto toGenrePercentDto(GenrePercent genrePercent);
 

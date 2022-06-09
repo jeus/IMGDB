@@ -15,7 +15,7 @@ public class GenrePercent implements Comparable<GenrePercent> {
     private String name;
     private int count;
     private float percent;
-    private  int sum;
+    private int sum;
 
     @Override
     public int compareTo(GenrePercent o) {

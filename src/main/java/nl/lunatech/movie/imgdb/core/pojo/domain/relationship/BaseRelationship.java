@@ -1,8 +1,7 @@
 package nl.lunatech.movie.imgdb.core.pojo.domain.relationship;
 
 import lombok.Data;
-import org.neo4j.ogm.annotation.GeneratedValue;
-import org.neo4j.ogm.annotation.Id;
+import org.springframework.data.neo4j.core.schema.RelationshipId;
 
 /**
  * @author alikhandani
@@ -11,7 +10,6 @@ import org.neo4j.ogm.annotation.Id;
  */
 @Data
 public abstract class BaseRelationship {
-    @Id
-    @GeneratedValue
+    @RelationshipId
     private Long relationshipId;
 }

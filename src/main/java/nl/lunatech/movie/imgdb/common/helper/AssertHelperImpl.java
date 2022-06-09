@@ -45,12 +45,18 @@ public class AssertHelperImpl implements AssertHelper {
     }
 
     @Override
-    public <T> void NotEqual(T first, T second) throws AssertingException {
+    public <T> void notEqual(T first, T second) throws AssertingException {
         if (first == second) {
             throw new AssertingException("lunatech.movie.imgdb.notNull.is-not-equal");
         }
         if ((first != null) && first.equals(second)) {
             throw new AssertingException("lunatech.movie.imgdb.notNull.is-not-equal");
+        }
+    }
+
+    public void notBigger(int first, int second) throws AssertingException {
+        if (first > second) {
+            throw new AssertingException("lunatech.movie.imgdb.notNull.is-bigger");
         }
     }
 

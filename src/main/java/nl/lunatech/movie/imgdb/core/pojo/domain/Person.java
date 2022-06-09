@@ -3,7 +3,11 @@ package nl.lunatech.movie.imgdb.core.pojo.domain;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import nl.lunatech.movie.imgdb.core.pojo.domain.relationship.Role;
-import org.neo4j.ogm.annotation.*;
+import org.springframework.data.neo4j.core.schema.Id;
+import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.schema.Property;
+import org.springframework.data.neo4j.core.schema.Relationship;
+import org.springframework.data.neo4j.core.support.DateString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,17 +18,17 @@ import java.util.List;
  * @project lunatech
  */
 @Data
-@NodeEntity
+@Node("Person")
 public class Person {
     @Id
-    @GeneratedValue
-    private Long id;
-    private String uid;
+    private Integer pid;
     private String name;
     private List<String> knownForTitles;
     private List<String> primaryProfession;
     @Property("born")
-    private int birthyear;
+    private Integer birthyear;
+    @Property("death")
+    private Integer deathyear;
 
     @JsonIgnoreProperties("person")
     @Relationship(type = "ACTED_IN")
@@ -37,4 +41,5 @@ public class Person {
     @JsonIgnoreProperties({"actors", "directors", "writers"})
     @Relationship(type = "WROTE")
     private List<Movie> wrote = new ArrayList<>();
+
 }

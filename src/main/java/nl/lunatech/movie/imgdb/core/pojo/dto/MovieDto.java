@@ -16,13 +16,17 @@ import java.util.List;
 public  class MovieDto {
 
     @JsonIgnore
-    private String uid;
+    private Integer mid;
     private String name;
     private String title;
     private String type;
     private List<String> genres;
     private Integer release;
     private String description;
-
+    private Float averageRating;
+    private int numVotes;
+    private String directorPid;
+    private String writerPid;
+    private Boolean directorWriters;
 
 }

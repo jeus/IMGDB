@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class PersonDto {
 
-    private String uid;
+    private Integer pid;
     private String name;
     private List<String> knownForTitles;
     private List<String> primaryProfession;

@@ -7,7 +7,7 @@ import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @SpringBootApplication
-@EnableNeo4jRepositories(basePackages = "nl.lunatech.movie.imgdb.core.repository")
+@EnableNeo4jRepositories(basePackages = "nl.lunatech.movie.imgdb.core.dao")
 @EnableTransactionManagement
 @EnableCaching
 public class ImgdbApplication {
