@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -65,17 +66,18 @@ public class ImportDataServiceImpl implements ImportDataService {
                                  @Value("${dataset.title_crew}") String titleCrew) {
         var PATH = path;
         try {
-            PATH = ResourceUtils.getFile("classpath:" + path).getPath();
-            LOG.info("---------->"+PATH);
+            if (path.startsWith("classpath:")) {
+                PATH = ResourceUtils.getFile(path).getPath();
+            }
         } catch (Exception ex) {
             LOG.error("CAN'T LOAD FILES");
         }
+        LOG.info("Loading files from" + PATH);
         TITLE_BASIC = PATH + titleBasic;
         NAME_BASIC = PATH + nameBasic;
         TITLE_PRINCIPAL = PATH + titlePrincipal;
         TITLE_RATING = PATH + titleRating;
         TITLE_CREW = PATH + titleCrew;
-        LOG.error(TITLE_BASIC);
 
 
     }
@@ -108,19 +110,20 @@ public class ImportDataServiceImpl implements ImportDataService {
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
                 .map(TsvParser::titleCrewToCrew).collectMap(Crew::getMid, Crew::getThis).block();
+
         Map<Integer, Rating> ratingMap = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(TITLE_RATING),
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
                 .map(TsvParser::titleRatingToRating).collectMap(Rating::getMid, Rating::getThis).block();
 
 
-        Flux<Movie> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(TITLE_BASIC),
+        Flux<List<Movie>> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(TITLE_BASIC),
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
                 .map(TsvParser::titleBasicToMovie).filter(movie -> movie.getMid() != null)
-                .map(movie -> movie.setDetails(ratingMap.get(movie.getMid()), crewMap.get(movie.getMid()))).map(jpaMovieDao::saveAndFlush);
+                .map(movie -> movie.setDetails(null, null)).buffer(100).map(jpaMovieDao::saveAllAndFlush);
 
-        flux.parallel(3).subscribe(a -> LOG.info("Movie:" + titleBasic.incrementAndGet()), err -> LOG.error("-----" + err));
+        flux.parallel(3).subscribe(a -> LOG.info("Movie:" + titleBasic.addAndGet(a.size())), err -> LOG.error("-----" + err));
 
         return getConditions();
     }
@@ -167,7 +170,7 @@ public class ImportDataServiceImpl implements ImportDataService {
                 .map(relation -> jpaPersonDao.joinById(relation.getPid(), relation.getMid(), relation.getTitle()))
                 .onErrorContinue((throwable, o) -> LOG.error("Error:" + ((Relation) o).getPid() + "->" + ((Relation) o).getMid()));
 
-        flux.parallel(3).subscribe(a -> LOG.info("CAST RELATION Pid"+a.getPid() + "  Number:" + titlePrincipal.incrementAndGet())
+        flux.parallel(3).subscribe(a -> LOG.info("CAST RELATION Pid": + a.getPid() + "  Number:" + titlePrincipal.incrementAndGet())
                 , err -> LOG.error(err.getCause() + "-----" + err));
         return getConditions();
     }

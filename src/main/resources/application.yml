@@ -15,7 +15,7 @@ spring:
     authentication:
       username: neo4j
       password: admin
-    uri: bolt://192.168.31.203:7687
+    uri: bolt://192.168.31.204:7687
 server:
   port: 5002
 logging:
@@ -23,7 +23,8 @@ logging:
     root: error
     org.springframework.web: error
 dataset:
-  path: static/datasetsmall
+#  path: classpath:static/datasetsmal
+  path: /Users/alikhandani/Project/code-challenges/lobox/dataset
   title_basic: /title.basics.tsv
   name_basic: /name.basics.tsv
   title_principal: /title.principals.tsv
