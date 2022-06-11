@@ -20,8 +20,8 @@ server:
   port: 5002
 logging:
   level:
-    root: info
-    org.springframework.web: info
+    root: error
+    org.springframework.web: error
 dataset:
   path: classpath:static/datasetsmall
 #  path: /Users/alikhandani/Project/code-challenges/lobox/dataset

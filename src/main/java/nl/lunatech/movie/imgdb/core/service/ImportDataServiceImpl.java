@@ -117,16 +117,18 @@ public class ImportDataServiceImpl implements ImportDataService {
 
         StringDecoder stringDecoder = StringDecoder.textPlainOnly();
         StringDecoder stringDecoder1 = StringDecoder.textPlainOnly();
-        Mono<Map<Integer, Crew>> crewMap = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_CREW_FILE),
-                StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
+        Mono<Map<Integer, Crew>> crewMap = DataBufferUtils.readAsynchronousFileChannel(
+                () -> AsynchronousFileChannel.open(pathOf(TITLE_CREW_FILE), StandardOpenOption.READ),
+                DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
                 .map(tsvStr -> {
                     titleCrewInt.incrementAndGet();
                     return TsvParser.titleCrewToCrew(tsvStr);
                 }).collectMap(Crew::getMid, Crew::getThis).cache();
 
-        Mono<Map<Integer, Rating>> ratingMap = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_RATING_FILE),
-                StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
+        Mono<Map<Integer, Rating>> ratingMap = DataBufferUtils.readAsynchronousFileChannel(
+                () -> AsynchronousFileChannel.open(pathOf(TITLE_RATING_FILE), StandardOpenOption.READ),
+                DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
                 .map(tsvStr -> {
                     titleRatingInt.incrementAndGet();
@@ -134,8 +136,9 @@ public class ImportDataServiceImpl implements ImportDataService {
                 })
                 .collectMap(Rating::getMid, Rating::getThis).cache();
 
-        Flux<List<Movie>> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_BASIC_FILE),
-                StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
+        Flux<List<Movie>> flux = DataBufferUtils.readAsynchronousFileChannel(
+                () -> AsynchronousFileChannel.open(pathOf(TITLE_BASIC_FILE), StandardOpenOption.READ),
+                DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
                 .map(tsvStr -> {
                     titleBasicInt.incrementAndGet();
@@ -143,13 +146,11 @@ public class ImportDataServiceImpl implements ImportDataService {
                 })
                 .filter(movie -> movie.getMid() != null)
                 .map(movie -> movie.setDetails(ratingMap.block().get(movie.getMid()), crewMap.block().get(movie.getMid()))).buffer(100).map(jpaMovieDao::saveAllAndFlush);
-//                .map(movie -> movie.setDetails(null,null)).buffer(100).map(jpaMovieDao::saveAllAndFlush);
 
 
-//        if (crewLoadOnRam.get() && ratingLoadOnRam.get()) {
-        flux.parallel(3).subscribe(a -> LOG.info("[Movie] " + titleBasicInt.get() + " Save in database"),
-                err -> LOG.error("-----" + err), () -> System.out.println("[MOVIE] Done"));
-//        }
+        flux.parallel(3).
+                subscribe(a -> LOG.info("[Movie] " + titleBasicInt.get() + " Save in database"),
+                        err -> LOG.error("-----" + err), () -> System.out.println("[MOVIE] Done"));
         return getConditions();
     }
 
@@ -164,8 +165,9 @@ public class ImportDataServiceImpl implements ImportDataService {
         }
         StringDecoder stringDecoder = StringDecoder.textPlainOnly();
 
-        Flux<List<Person>> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + NAME_BASIC_FILE),
-                StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
+        Flux<List<Person>> flux = DataBufferUtils.readAsynchronousFileChannel(
+                () -> AsynchronousFileChannel.open(pathOf(NAME_BASIC_FILE), StandardOpenOption.READ),
+                DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
                 .map(tsvStr -> {
                     nameBasicInt.incrementAndGet();
@@ -191,14 +193,15 @@ public class ImportDataServiceImpl implements ImportDataService {
         }
         StringDecoder stringDecoder = StringDecoder.textPlainOnly();
 
-        Flux<Person> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_PRINCIPAL_FILE),
-                StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
+        Flux<Person> flux = DataBufferUtils.readAsynchronousFileChannel(
+                () -> AsynchronousFileChannel.open(pathOf(TITLE_PRINCIPAL_FILE), StandardOpenOption.READ),
+                DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
                 .map(TsvParser::titlePrincipalToRelation).filter(relation -> relation.getPid() != null)
                 .map(relation -> jpaPersonDao.joinById(relation.getPid(), relation.getMid(), relation.getTitle()))
                 .onErrorContinue((throwable, o) -> LOG.error("Error:" + ((Relation) o).getPid() + "->" + ((Relation) o).getMid()));
 
-        flux.parallel(3).subscribe(a -> LOG.info("[RELATION] Pid:" + a.getPid() + "  count:" + titlePrincipalInt.incrementAndGet())
+        flux.parallel(20).subscribe(a -> LOG.info("[RELATION] Pid:" + a.getPid() + "  count:" + titlePrincipalInt.incrementAndGet())
                 , err -> LOG.error(err.getCause() + "-----" + err));
         return getCurrentConditions();
     }
@@ -275,6 +278,10 @@ public class ImportDataServiceImpl implements ImportDataService {
             return ImportStatus.IMPORTING;
         }
         return ImportStatus.IMPORTED;
+    }
+
+    private Path pathOf(String fileName) {
+        return Path.of(PATH + fileName);
     }
 
 }
