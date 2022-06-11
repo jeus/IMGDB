@@ -20,11 +20,11 @@ server:
   port: 5002
 logging:
   level:
-    root: error
-    org.springframework.web: error
+    root: info
+    org.springframework.web: info
 dataset:
-#  path: classpath:static/datasetsmal
-  path: /Users/alikhandani/Project/code-challenges/lobox/dataset
+  path: classpath:static/datasetsmall
+#  path: /Users/alikhandani/Project/code-challenges/lobox/dataset
   title_basic: /title.basics.tsv
   name_basic: /name.basics.tsv
   title_principal: /title.principals.tsv

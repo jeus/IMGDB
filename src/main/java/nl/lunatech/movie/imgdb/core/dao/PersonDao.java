@@ -2,6 +2,8 @@ package nl.lunatech.movie.imgdb.core.dao;
 
 import nl.lunatech.movie.imgdb.core.pojo.domain.Person;
 
+import java.util.List;
+
 /**
  * @author alikhandani
  * @created 25/05/2022
@@ -14,5 +16,6 @@ public interface PersonDao {
 
     Integer getShortestPath(int firstPid, int secondPid);
 
+    List<Person> saveAllAndFlush(List<Person> persons);
 
 }

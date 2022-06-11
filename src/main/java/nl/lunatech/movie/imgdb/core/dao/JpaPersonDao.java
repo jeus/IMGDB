@@ -1,12 +1,17 @@
 package nl.lunatech.movie.imgdb.core.dao;
 
+import nl.lunatech.movie.imgdb.core.pojo.domain.Movie;
 import nl.lunatech.movie.imgdb.core.pojo.domain.Person;
 import org.neo4j.cypherdsl.core.*;
 import org.neo4j.driver.types.Path;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * @author alikhandani
@@ -24,6 +29,13 @@ public class JpaPersonDao implements PersonDao {
     public Person saveAndFlush(Person person) {
         Person person1 = personRepository.save(person);
         return person1;
+    }
+
+    @Override
+    @Transactional
+    public List<Person> saveAllAndFlush(List<Person> persons) {
+        List<Person> movie1 = personRepository.saveAll(persons);
+        return movie1;
     }
 
     @Override
@@ -56,6 +68,5 @@ public class JpaPersonDao implements PersonDao {
                         m.getRequiredSymbolicName()
                 ).build();
     }
-
 
 }

@@ -7,10 +7,10 @@ import lombok.Data;
 @AllArgsConstructor
 public class ItemCondition {
     private String name;
-    private String title;
+    private String file;
     private String description;
     private int percent;
     private long rowCount;
     private ImportStatus status;
-    private int order;
+    private String prerequisites;
 }

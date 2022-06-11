@@ -5,7 +5,6 @@ import nl.lunatech.movie.imgdb.core.pojo.domain.Person;
 import nl.lunatech.movie.imgdb.core.pojo.model.Crew;
 import nl.lunatech.movie.imgdb.core.pojo.model.Rating;
 import nl.lunatech.movie.imgdb.core.pojo.model.Relation;
-import nl.lunatech.movie.imgdb.core.service.ImportDataServiceImpl;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +57,7 @@ public class TsvParser {
         movie.setRelease(parseToInt(titleBasic[START_YEAR]));
         movie.setDescription("{" +
                 "\"isAdult\":\"" + checkNull(titleBasic[IS_ADULT], "") + "\"," +
-                "\"runtime-minute\":\"" + checkNull(titleBasic[RUNTIME_MINUTES],"") + "\"" +
+                "\"runtime-minute\":\"" + checkNull(titleBasic[RUNTIME_MINUTES], "") + "\"" +
                 "}");
 
         return movie;
@@ -66,6 +65,10 @@ public class TsvParser {
 
     public static Rating titleRatingToRating(String tsvRow) {
         String[] titleRating = tsvRow.split("\t");
+        var mid = keyExtract(titleRating[TCONST]);
+        if (mid != null)
+            if (mid % 100000 == 0)
+                LOG.info("[RATE] "+mid + " rate on ram");
         return new Rating(keyExtract(titleRating[TCONST]), parseFloat(titleRating[AVG_RATING]), parseToInt(titleRating[NUM_VOTES]));
     }
 
@@ -74,8 +77,8 @@ public class TsvParser {
         String[] titleCrew = tsvRow.split("\t");
         var mid = keyExtract(titleCrew[TCONST]);
         if (mid != null)
-            if (mid % 10000 == 0)
-                LOG.info(mid + "----");
+            if (mid % 1000000 == 0)
+                LOG.info("[CREW] "+mid + " crew on ram");
         var diretorPids = titleCrew[DIRECTOR];
         var writerPids = titleCrew[WRITER];
 

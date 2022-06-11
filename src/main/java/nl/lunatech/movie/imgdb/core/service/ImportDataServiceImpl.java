@@ -21,6 +21,7 @@ import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ResourceUtils;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousFileChannel;
@@ -40,44 +41,52 @@ public class ImportDataServiceImpl implements ImportDataService {
     @Autowired
     private ResourceLoader resourceLoader;
 
-    private final String TITLE_BASIC;
-    private final String NAME_BASIC;
-    private final String TITLE_PRINCIPAL;
-    private final String TITLE_RATING;
-    private final String TITLE_CREW;
+    private String PATH;
+    private final String TITLE_BASIC_FILE;
+    private final String NAME_BASIC_FILE;
+    private final String TITLE_PRINCIPAL_FILE;
+    private final String TITLE_RATING_FILE;
+    private final String TITLE_CREW_FILE;
 
     public static final String MOVIE = "MOVIE";
     public static final String PERSON = "PERSON";
     public static final String RELATION = "RELATION";
+    public static final String RATING = "RATING";
+    public static final String CREW = "CREW";
 
-    public AtomicInteger titleBasic = new AtomicInteger(0);
-    public AtomicInteger nameBasic = new AtomicInteger(0);
-    public AtomicInteger titlePrincipal = new AtomicInteger(0);
+    public AtomicInteger titleBasicInt = new AtomicInteger(0);
+    public AtomicInteger titleCrewInt = new AtomicInteger(0);
+    public AtomicInteger nameBasicInt = new AtomicInteger(0);
+    public AtomicInteger titleRatingInt = new AtomicInteger(0);
+    public AtomicInteger titlePrincipalInt = new AtomicInteger(0);
 
     public long totalTitleBasic;
     public long totalNameBasic;
+    public long totalTitleCrew;
+    public long totalTitleRating;
     public long totalTitlePrincipal;
 
     public ImportDataServiceImpl(@Value("${dataset.path}") String path,
-                                 @Value("${dataset.title_basic}") String titleBasic,
+                                 @Value("${dataset.title_basic}") String titleBasicInt,
                                  @Value("${dataset.name_basic}") String nameBasic,
-                                 @Value("${dataset.title_principal}") String titlePrincipal,
+                                 @Value("${dataset.title_principal}") String titlePrincipalInt,
                                  @Value("${dataset.title_rating}") String titleRating,
                                  @Value("${dataset.title_crew}") String titleCrew) {
-        var PATH = path;
+
+        PATH = path;
         try {
             if (path.startsWith("classpath:")) {
                 PATH = ResourceUtils.getFile(path).getPath();
             }
         } catch (Exception ex) {
-            LOG.error("CAN'T LOAD FILES");
+            LOG.error("CAN'T LOAD FILES" + PATH);
         }
-        LOG.info("Loading files from" + PATH);
-        TITLE_BASIC = PATH + titleBasic;
-        NAME_BASIC = PATH + nameBasic;
-        TITLE_PRINCIPAL = PATH + titlePrincipal;
-        TITLE_RATING = PATH + titleRating;
-        TITLE_CREW = PATH + titleCrew;
+        LOG.info("[PATH] Loading files from:" + PATH);
+        TITLE_BASIC_FILE = titleBasicInt;
+        NAME_BASIC_FILE = nameBasic;
+        TITLE_PRINCIPAL_FILE = titlePrincipalInt;
+        TITLE_RATING_FILE = titleRating;
+        TITLE_CREW_FILE = titleCrew;
 
 
     }
@@ -96,55 +105,74 @@ public class ImportDataServiceImpl implements ImportDataService {
     public Map<String, ItemCondition> importMovies() {
 
         synchronized (this) {
-            if (titleBasic.get() != 0) {
+            if (titleCrewInt.get() != 0) {
+                LOG.info("[LOADING] LOADING ALL PROCESS... ");
                 return getCurrentConditions();
             } else {
-                titleBasic.incrementAndGet();
+                LOG.info("[STARTING] LOADING ALL PROCESS... ");
+                titleCrewInt.incrementAndGet();
             }
         }
         setInitiateCondition();
 
         StringDecoder stringDecoder = StringDecoder.textPlainOnly();
         StringDecoder stringDecoder1 = StringDecoder.textPlainOnly();
-        Map<Integer, Crew> crewMap = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(TITLE_CREW),
+        Mono<Map<Integer, Crew>> crewMap = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_CREW_FILE),
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
-                .map(TsvParser::titleCrewToCrew).collectMap(Crew::getMid, Crew::getThis).block();
+                .map(tsvStr -> {
+                    titleCrewInt.incrementAndGet();
+                    return TsvParser.titleCrewToCrew(tsvStr);
+                }).collectMap(Crew::getMid, Crew::getThis).cache();
 
-        Map<Integer, Rating> ratingMap = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(TITLE_RATING),
+        Mono<Map<Integer, Rating>> ratingMap = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_RATING_FILE),
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
-                .map(TsvParser::titleRatingToRating).collectMap(Rating::getMid, Rating::getThis).block();
+                .map(tsvStr -> {
+                    titleRatingInt.incrementAndGet();
+                    return TsvParser.titleRatingToRating(tsvStr);
+                })
+                .collectMap(Rating::getMid, Rating::getThis).cache();
 
-
-        Flux<List<Movie>> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(TITLE_BASIC),
+        Flux<List<Movie>> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_BASIC_FILE),
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
-                .map(TsvParser::titleBasicToMovie).filter(movie -> movie.getMid() != null)
-                .map(movie -> movie.setDetails(null, null)).buffer(100).map(jpaMovieDao::saveAllAndFlush);
+                .map(tsvStr -> {
+                    titleBasicInt.incrementAndGet();
+                    return TsvParser.titleBasicToMovie(tsvStr);
+                })
+                .filter(movie -> movie.getMid() != null)
+                .map(movie -> movie.setDetails(ratingMap.block().get(movie.getMid()), crewMap.block().get(movie.getMid()))).buffer(100).map(jpaMovieDao::saveAllAndFlush);
+//                .map(movie -> movie.setDetails(null,null)).buffer(100).map(jpaMovieDao::saveAllAndFlush);
 
-        flux.parallel(3).subscribe(a -> LOG.info("Movie:" + titleBasic.addAndGet(a.size())), err -> LOG.error("-----" + err));
 
+//        if (crewLoadOnRam.get() && ratingLoadOnRam.get()) {
+        flux.parallel(3).subscribe(a -> LOG.info("[Movie] " + titleBasicInt.get() + " Save in database"),
+                err -> LOG.error("-----" + err), () -> System.out.println("[MOVIE] Done"));
+//        }
         return getConditions();
     }
 
     @Override
     public Map<String, ItemCondition> importCrew() {
         synchronized (this) {
-            if (nameBasic.get() != 0) {
+            if (nameBasicInt.get() != 0) {
                 return getCurrentConditions();
             } else {
-                nameBasic.incrementAndGet();
+                nameBasicInt.incrementAndGet();
             }
         }
         StringDecoder stringDecoder = StringDecoder.textPlainOnly();
 
-        Flux<Person> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(NAME_BASIC),
+        Flux<List<Person>> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + NAME_BASIC_FILE),
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
-                .map(TsvParser::nameBasicToPerson).filter(person -> person.getPid() != null).map(jpaPersonDao::saveAndFlush);
+                .map(tsvStr -> {
+                    nameBasicInt.incrementAndGet();
+                    return TsvParser.nameBasicToPerson(tsvStr);
+                }).filter(person -> person.getPid() != null).buffer(100).map(jpaPersonDao::saveAllAndFlush);
 
-        flux.parallel(3).subscribe(a -> LOG.info("PERSON count:" + nameBasic.incrementAndGet()), err -> LOG.error("-----" + err));
+        flux.parallel(3).subscribe(a -> LOG.info("PERSON count:" + nameBasicInt.get()), err -> LOG.error("-----" + err));
         return getConditions();
     }
 
@@ -157,22 +185,22 @@ public class ImportDataServiceImpl implements ImportDataService {
                     || getConditions().get(RELATION).getStatus() != ImportStatus.NOT_IMPORTED) {
                 return getCurrentConditions();
             } else {
-                titlePrincipal.incrementAndGet();
+                titlePrincipalInt.incrementAndGet();
             }
 
         }
         StringDecoder stringDecoder = StringDecoder.textPlainOnly();
 
-        Flux<Person> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(TITLE_PRINCIPAL),
+        Flux<Person> flux = DataBufferUtils.readAsynchronousFileChannel(() -> AsynchronousFileChannel.open(Path.of(PATH + TITLE_PRINCIPAL_FILE),
                 StandardOpenOption.READ), DefaultDataBufferFactory.sharedInstance, 1024)
                 .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
                 .map(TsvParser::titlePrincipalToRelation).filter(relation -> relation.getPid() != null)
                 .map(relation -> jpaPersonDao.joinById(relation.getPid(), relation.getMid(), relation.getTitle()))
                 .onErrorContinue((throwable, o) -> LOG.error("Error:" + ((Relation) o).getPid() + "->" + ((Relation) o).getMid()));
 
-        flux.parallel(3).subscribe(a -> LOG.info("CAST RELATION Pid": + a.getPid() + "  Number:" + titlePrincipal.incrementAndGet())
+        flux.parallel(3).subscribe(a -> LOG.info("[RELATION] Pid:" + a.getPid() + "  count:" + titlePrincipalInt.incrementAndGet())
                 , err -> LOG.error(err.getCause() + "-----" + err));
-        return getConditions();
+        return getCurrentConditions();
     }
 
 
@@ -186,19 +214,31 @@ public class ImportDataServiceImpl implements ImportDataService {
     public Map<String, ItemCondition> getConditions() {
         Map<String, ItemCondition> importStatistics = new HashMap<>();
 
-        ItemCondition movieStatistic = new ItemCondition("Movies", "title.basic", "Import Movies To Database",
-                (int) Statistic.percent(titleBasic.get(), totalTitleBasic), titleBasic.get(),
-                getStatus(titleBasic.get(), totalTitleBasic), 0);
+        ItemCondition crewStatistic = new ItemCondition("Crew", TITLE_CREW_FILE, "Loading Crew on RAM",
+                (int) Statistic.percent(titleCrewInt.get(), totalTitleCrew), titleCrewInt.get(),
+                getStatus(titleCrewInt.get(), totalTitleCrew), "NON");
+        importStatistics.put(CREW, crewStatistic);
+
+
+        ItemCondition ratingStatisctic = new ItemCondition("Rating", TITLE_RATING_FILE, "Loading Rating on RAM",
+                (int) Statistic.percent(titleRatingInt.get(), totalTitleRating), titleRatingInt.get(),
+                getStatus(titleRatingInt.get(), totalTitleRating), "NON");
+        importStatistics.put(RATING, ratingStatisctic);
+
+
+        ItemCondition movieStatistic = new ItemCondition("Movies", TITLE_BASIC_FILE, "Import Movies To Database",
+                (int) Statistic.percent(titleBasicInt.get(), totalTitleBasic), titleBasicInt.get(),
+                getStatus(titleBasicInt.get(), totalTitleBasic), "[Crew,Rating]");
         importStatistics.put(MOVIE, movieStatistic);
 
-        ItemCondition personStatistic = new ItemCondition("Person", "name.basic", "Import person To Database",
-                (int) Statistic.percent(nameBasic.get(), totalNameBasic), nameBasic.get(),
-                getStatus(nameBasic.get(), totalNameBasic), 1);
+        ItemCondition personStatistic = new ItemCondition("Persons", NAME_BASIC_FILE, "Import person To Database",
+                (int) Statistic.percent(nameBasicInt.get(), totalNameBasic), nameBasicInt.get(),
+                getStatus(nameBasicInt.get(), totalNameBasic), "NON");
         importStatistics.put(PERSON, personStatistic);
 
-        ItemCondition principalStatistic = new ItemCondition("RELATION", "title.principals", "Import Relations To Database",
-                (int) Statistic.percent(titlePrincipal.get(), totalTitlePrincipal), titlePrincipal.get(),
-                getStatus(titlePrincipal.get(), totalTitlePrincipal), 2);
+        ItemCondition principalStatistic = new ItemCondition("Relations", TITLE_PRINCIPAL_FILE, "Import Relations To Database",
+                (int) Statistic.percent(titlePrincipalInt.get(), totalTitlePrincipal), titlePrincipalInt.get(),
+                getStatus(titlePrincipalInt.get(), totalTitlePrincipal), "[Movie,Person]");
         importStatistics.put(RELATION, principalStatistic);
 
         return importStatistics;
@@ -210,21 +250,17 @@ public class ImportDataServiceImpl implements ImportDataService {
     }
 
     private void setInitiateCondition() {
-        Path fileTitleBasic = Paths.get(TITLE_BASIC);
-        Path fileTitlePrincipal = Paths.get(TITLE_PRINCIPAL);
-        Path fileNameBasic = Paths.get(NAME_BASIC);
+
 
         try {
-            long totalTitleBasic = Files.lines(fileTitleBasic).count();
-            long totalTitlePrincipal = Files.lines(fileTitlePrincipal).count();
-            long totalNameBasic = Files.lines(fileNameBasic).count();
-            LOG.info("TITLE_BASIC:" + totalTitleBasic
-                    + "  TITLE_PRINCIPAL:" + totalTitlePrincipal
-                    + "  NAME_BASIC:" + totalNameBasic + "-------" + titleBasic.get());
 
-            this.totalTitleBasic = totalTitleBasic;
-            this.totalTitlePrincipal = totalTitlePrincipal;
-            this.totalNameBasic = totalNameBasic;
+            this.totalTitleBasic = Files.lines(Paths.get(PATH + TITLE_BASIC_FILE)).count();
+            this.totalTitlePrincipal = Files.lines(Paths.get(PATH + TITLE_PRINCIPAL_FILE)).count();
+            this.totalNameBasic = Files.lines(Paths.get(PATH + NAME_BASIC_FILE)).count();
+            this.totalTitleCrew = Files.lines(Paths.get(PATH + TITLE_CREW_FILE)).count();
+            this.totalTitleRating = Files.lines(Paths.get(PATH + TITLE_RATING_FILE)).count();
+            LOG.info("[TOTLAS] TITLE_BASIC:{}  TITLE_PRINCIPAL:{}  NAME_BASIC:{} TITLE_CREW:{} TITLE_RATING:{}"
+                    , totalTitlePrincipal, totalTitleBasic, totalNameBasic, totalTitleCrew, totalTitleRating);
         } catch (IOException e) {
             e.printStackTrace();
         }
