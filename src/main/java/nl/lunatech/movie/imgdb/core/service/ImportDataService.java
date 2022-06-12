@@ -10,8 +10,6 @@ import java.util.Map;
 public interface ImportDataService {
     Map<String, ItemCondition> importMovies();
 
-    Map<String, ItemCondition> importMainCrews(String str);
-
     Map<String, ItemCondition> importCrew();
 
     Map<String, ItemCondition> importCastRelations();

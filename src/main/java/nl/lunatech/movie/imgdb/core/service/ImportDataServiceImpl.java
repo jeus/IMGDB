@@ -116,25 +116,9 @@ public class ImportDataServiceImpl implements ImportDataService {
         setInitiateCondition();
 
         StringDecoder stringDecoder = StringDecoder.textPlainOnly();
-        StringDecoder stringDecoder1 = StringDecoder.textPlainOnly();
-        Mono<Map<Integer, Crew>> crewMap = DataBufferUtils.readAsynchronousFileChannel(
-                () -> AsynchronousFileChannel.open(pathOf(TITLE_CREW_FILE), StandardOpenOption.READ),
-                DefaultDataBufferFactory.sharedInstance, 1024)
-                .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
-                .map(tsvStr -> {
-                    titleCrewInt.incrementAndGet();
-                    return TsvParser.titleCrewToCrew(tsvStr);
-                }).collectMap(Crew::getMid, Crew::getThis).cache();
+        Mono<Map<Integer, Crew>> crewMap = getCrewOnMono();
+        Mono<Map<Integer, Rating>> ratingMap = getRatingOnMono();
 
-        Mono<Map<Integer, Rating>> ratingMap = DataBufferUtils.readAsynchronousFileChannel(
-                () -> AsynchronousFileChannel.open(pathOf(TITLE_RATING_FILE), StandardOpenOption.READ),
-                DefaultDataBufferFactory.sharedInstance, 1024)
-                .transform(dataBufferFlux -> stringDecoder1.decode(dataBufferFlux, null, null, null))
-                .map(tsvStr -> {
-                    titleRatingInt.incrementAndGet();
-                    return TsvParser.titleRatingToRating(tsvStr);
-                })
-                .collectMap(Rating::getMid, Rating::getThis).cache();
 
         Flux<List<Movie>> flux = DataBufferUtils.readAsynchronousFileChannel(
                 () -> AsynchronousFileChannel.open(pathOf(TITLE_BASIC_FILE), StandardOpenOption.READ),
@@ -206,10 +190,31 @@ public class ImportDataServiceImpl implements ImportDataService {
         return getCurrentConditions();
     }
 
+    private Mono<Map<Integer, Rating>> getRatingOnMono() {
+        StringDecoder stringDecoder = StringDecoder.textPlainOnly();
+        return DataBufferUtils.readAsynchronousFileChannel(
+                () -> AsynchronousFileChannel.open(pathOf(TITLE_RATING_FILE), StandardOpenOption.READ),
+                DefaultDataBufferFactory.sharedInstance, 1024)
+                .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
+                .map(tsvStr -> {
+                    titleRatingInt.incrementAndGet();
+                    return TsvParser.titleRatingToRating(tsvStr);
+                })
+                .collectMap(Rating::getMid, Rating::getThis).cache();
+    }
 
-    @Override
-    public Map<String, ItemCondition> importMainCrews(String str) {
-        return null;
+    private Mono<Map<Integer, Crew>> getCrewOnMono() {
+        StringDecoder stringDecoder = StringDecoder.textPlainOnly();
+
+        return DataBufferUtils.readAsynchronousFileChannel(
+                () -> AsynchronousFileChannel.open(pathOf(TITLE_CREW_FILE), StandardOpenOption.READ),
+                DefaultDataBufferFactory.sharedInstance, 1024)
+                .transform(dataBufferFlux -> stringDecoder.decode(dataBufferFlux, null, null, null))
+                .map(tsvStr -> {
+                    titleCrewInt.incrementAndGet();
+                    return TsvParser.titleCrewToCrew(tsvStr);
+                }).collectMap(Crew::getMid, Crew::getThis).cache();
+
     }
 
 
@@ -217,31 +222,30 @@ public class ImportDataServiceImpl implements ImportDataService {
     public Map<String, ItemCondition> getConditions() {
         Map<String, ItemCondition> importStatistics = new HashMap<>();
 
-        ItemCondition crewStatistic = new ItemCondition("Crew", TITLE_CREW_FILE, "Loading Crew on RAM",
+        var crewStatistic = new ItemCondition("Crew", TITLE_CREW_FILE, "Loading Crew on RAM",
                 (int) Statistic.percent(titleCrewInt.get(), totalTitleCrew), titleCrewInt.get(),
                 getStatus(titleCrewInt.get(), totalTitleCrew), "NON");
-        importStatistics.put(CREW, crewStatistic);
 
-
-        ItemCondition ratingStatisctic = new ItemCondition("Rating", TITLE_RATING_FILE, "Loading Rating on RAM",
+        var ratingStatisctic = new ItemCondition("Rating", TITLE_RATING_FILE, "Loading Rating on RAM",
                 (int) Statistic.percent(titleRatingInt.get(), totalTitleRating), titleRatingInt.get(),
                 getStatus(titleRatingInt.get(), totalTitleRating), "NON");
-        importStatistics.put(RATING, ratingStatisctic);
 
-
-        ItemCondition movieStatistic = new ItemCondition("Movies", TITLE_BASIC_FILE, "Import Movies To Database",
+        var movieStatistic = new ItemCondition("Movies", TITLE_BASIC_FILE, "Import Movies To Database",
                 (int) Statistic.percent(titleBasicInt.get(), totalTitleBasic), titleBasicInt.get(),
                 getStatus(titleBasicInt.get(), totalTitleBasic), "[Crew,Rating]");
-        importStatistics.put(MOVIE, movieStatistic);
 
-        ItemCondition personStatistic = new ItemCondition("Persons", NAME_BASIC_FILE, "Import person To Database",
+        var personStatistic = new ItemCondition("Persons", NAME_BASIC_FILE, "Import person To Database",
                 (int) Statistic.percent(nameBasicInt.get(), totalNameBasic), nameBasicInt.get(),
                 getStatus(nameBasicInt.get(), totalNameBasic), "NON");
-        importStatistics.put(PERSON, personStatistic);
 
-        ItemCondition principalStatistic = new ItemCondition("Relations", TITLE_PRINCIPAL_FILE, "Import Relations To Database",
+        var principalStatistic = new ItemCondition("Relations", TITLE_PRINCIPAL_FILE, "Import Relations To Database",
                 (int) Statistic.percent(titlePrincipalInt.get(), totalTitlePrincipal), titlePrincipalInt.get(),
                 getStatus(titlePrincipalInt.get(), totalTitlePrincipal), "[Movie,Person]");
+
+        importStatistics.put(CREW, crewStatistic);
+        importStatistics.put(RATING, ratingStatisctic);
+        importStatistics.put(MOVIE, movieStatistic);
+        importStatistics.put(PERSON, personStatistic);
         importStatistics.put(RELATION, principalStatistic);
 
         return importStatistics;
@@ -253,8 +257,6 @@ public class ImportDataServiceImpl implements ImportDataService {
     }
 
     private void setInitiateCondition() {
-
-
         try {
 
             this.totalTitleBasic = Files.lines(Paths.get(PATH + TITLE_BASIC_FILE)).count();
